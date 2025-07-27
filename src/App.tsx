@@ -41,6 +41,74 @@ function App() {
     simulateOnline
   } = useAdvancedSync(userId);
 
+  // Real-time sync listener for updates from other devices
+  useEffect(() => {
+    const handleRemoteUpdate = (event: any) => {
+      if (event.userId === userId) return; // Ignore own updates
+      
+      console.log('📡 Received remote update:', event);
+      
+      switch (event.type) {
+        case 'item_added':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const itemExists = prev.items.some(item => item.id === event.data.item.id);
+              if (itemExists) return prev;
+              
+              const updatedItems = [...prev.items, event.data.item];
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'item_updated':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const updatedItems = prev.items.map(item =>
+                item.id === event.data.item.id ? event.data.item : item
+              );
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'item_deleted':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const updatedItems = prev.items.filter(item => item.id !== event.data.itemId);
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'list_updated':
+          if (event.data.id === currentList.id) {
+            setCurrentList(event.data);
+          }
+          break;
+      }
+    };
+
+    // Subscribe to real-time updates
+    const unsubscribe = window.addEventListener('realtime-update', handleRemoteUpdate);
+    
+    return () => {
+      window.removeEventListener('realtime-update', handleRemoteUpdate);
+    };
+  }, [userId, currentList.id, calculateTotal]);
+
   const [currentPage, setCurrentPage] = useState<'list' | 'history'>('list');
   const [newItemName, setNewItemName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -125,7 +193,20 @@ function App() {
     updatedList.total = calculateTotal(updatedList.items);
     
     setCurrentList(updatedList);
+    
+    // Real-time sync for new items
     await syncItem(newItem, currentList.id);
+    
+    // Broadcast to other devices
+    window.dispatchEvent(new CustomEvent('realtime-update', {
+      detail: {
+        type: 'item_added',
+        data: { item: newItem, listId: currentList.id },
+        userId: userId,
+        timestamp: Date.now()
+      }
+    }));
+    
     setNewItemName('');
   };
 
@@ -153,7 +234,7 @@ function App() {
   const updatePrice = async (id: string, price: string) => {
     const numPrice = parseFloat(price) || 0;
     const updatedItems = currentList.items.map(item =>
-      item.id === id ? { ...item, price: numPrice } : item
+      item.id === id ? { ...item, price: numPrice, priceDisplay: undefined } : item
     );
     
     const updatedList = {
@@ -230,6 +311,12 @@ function App() {
     };
     
     setCurrentList(updatedList);
+    
+    // Real-time sync for price changes
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
   };
 
   const updateQuantity = async (id: string, increment: boolean) => {
@@ -436,7 +523,7 @@ function App() {
                 <span className="text-gray-500 text-sm sm:text-base">x</span>
                 <input
                   type="number"
-                  value={item.priceDisplay || (item.price ? item.price.toFixed(2).replace('.', ',') : '')}
+                  value={item.priceDisplay !== undefined ? item.priceDisplay : (item.price ? item.price.toFixed(2).replace('.', ',') : '')}
                   onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
                   onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
                   placeholder="R$ 0,00"

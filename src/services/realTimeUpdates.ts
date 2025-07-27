@@ -186,6 +186,17 @@ class RealTimeUpdatesEngine {
       // Simulate network delay
       setTimeout(() => {
         this.notifySubscribers(event);
+        
+        // Broadcast to other browser tabs/windows
+        window.dispatchEvent(new CustomEvent('realtime-update', {
+          detail: event
+        }));
+        
+        // Use BroadcastChannel for cross-tab communication
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel('shopping-list-sync');
+          channel.postMessage(event);
+        }
       }, Math.random() * 50 + 10);
       
     } catch (error) {

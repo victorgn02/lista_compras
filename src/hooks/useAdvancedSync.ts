@@ -53,11 +53,25 @@ export function useAdvancedSync(userId: string): AdvancedSyncHook {
       updateSyncStatus();
     });
 
+    // Cross-tab synchronization using BroadcastChannel
+    const broadcastChannel = new BroadcastChannel('shopping-list-sync');
+    const handleBroadcastMessage = (event: MessageEvent) => {
+      console.log('📡 Cross-tab sync received:', event.data);
+      // Dispatch custom event for the main app to handle
+      window.dispatchEvent(new CustomEvent('realtime-update', {
+        detail: event.data
+      }));
+    };
+    
+    broadcastChannel.addEventListener('message', handleBroadcastMessage);
+
     // Update sync status periodically
     const statusInterval = setInterval(updateSyncStatus, 5000);
 
     return () => {
       clearInterval(statusInterval);
+      broadcastChannel.removeEventListener('message', handleBroadcastMessage);
+      broadcastChannel.close();
       if (realTimeEngineRef.current) {
         realTimeEngineRef.current.unsubscribe(subscriptionId);
         realTimeEngineRef.current.disconnect();
@@ -122,12 +136,16 @@ export function useAdvancedSync(userId: string): AdvancedSyncHook {
 
       // Sync through intelligent engine
       await syncEngineRef.current.syncEvent({
-        type: 'item_updated',
+        type: item.createdAt === new Date().toISOString() ? 'item_added' : 'item_updated',
         data: { item, listId }
       });
 
       // Broadcast real-time update
-      realTimeEngineRef.current.broadcastUpdate('update', 'item', { item, listId });
+      realTimeEngineRef.current.broadcastUpdate(
+        item.createdAt === new Date().toISOString() ? 'create' : 'update', 
+        'item', 
+        { item, listId }
+      );
 
       console.log('✅ Item synced successfully:', item.name);
     } catch (error) {
