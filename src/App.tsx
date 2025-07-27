@@ -119,6 +119,10 @@ function App() {
     itemName: ''
   });
 
+  const calculateTotal = (items: GroceryItem[]): number => {
+    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  };
+
   // Sort items by creation date, newest first
   const sortedItems = [...currentList.items].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -343,10 +347,6 @@ function App() {
     if (updatedItem) {
       await syncItem(updatedItem, currentList.id);
     }
-  };
-
-  const calculateTotal = (items: GroceryItem[]): number => {
-    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const startEditing = (item: GroceryItem) => {
