@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShoppingBag, Plus, Minus, Trash2, Edit2, Check, X } from 'lucide-react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAdvancedSync } from './hooks/useAdvancedSync';
@@ -40,6 +40,10 @@ function App() {
     simulateOffline,
     simulateOnline
   } = useAdvancedSync(userId);
+
+  const calculateTotal = useCallback((items: GroceryItem[]): number => {
+    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  }, []);
 
   // Real-time sync listener for updates from other devices
   useEffect(() => {
@@ -118,10 +122,6 @@ function App() {
     itemId: null,
     itemName: ''
   });
-
-  const calculateTotal = (items: GroceryItem[]): number => {
-    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  };
 
   // Sort items by creation date, newest first
   const sortedItems = [...currentList.items].sort((a, b) => 
