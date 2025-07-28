@@ -301,11 +301,13 @@ function App() {
   };
 
   const handlePriceInputChange = async (id: string, inputValue: string) => {
+    // Store the raw input value for display
+    const rawValue = inputValue;
     const formattedValue = formatPriceInput(inputValue);
     const numericValue = parseFloat(formattedValue.replace(',', '.')) || 0;
     
     const updatedItems = currentList.items.map(item =>
-      item.id === id ? { ...item, price: numericValue, priceDisplay: formattedValue } : item
+      item.id === id ? { ...item, price: numericValue, priceDisplay: rawValue } : item
     );
     
     const updatedList = {
@@ -523,7 +525,7 @@ function App() {
                 <span className="text-gray-500 text-sm sm:text-base">x</span>
                 <input
                   type="number"
-                  value={item.priceDisplay !== undefined ? item.priceDisplay : (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
+                  value={item.priceDisplay || (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
                   onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
                   onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
                   placeholder="R$ 0,00"
