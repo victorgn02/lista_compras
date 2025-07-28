@@ -523,7 +523,7 @@ function App() {
                 <span className="text-gray-500 text-sm sm:text-base">x</span>
                 <input
                   type="number"
-                  value={item.priceDisplay !== undefined ? item.priceDisplay : (item.price ? item.price.toFixed(2).replace('.', ',') : '')}
+                  value={item.priceDisplay || (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
                   onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
                   onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
                   placeholder="R$ 0,00"
