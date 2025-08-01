@@ -1,50 +1,117 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShoppingBag, Plus, Minus, Trash2, Edit2, Check, X } from 'lucide-react';
-import { useSharedList } from './hooks/useSharedList';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { useAdvancedSync } from './hooks/useAdvancedSync';
 import { DeleteModal } from './components/DeleteModal';
 import { HistoryList } from './components/HistoryList';
 import { Navigation } from './components/Navigation';
-import { ShareButton } from './components/ShareButton';
+import { SyncStatusIndicator } from './components/SyncStatusIndicator';
 import { GroceryItem, ShoppingList } from './types';
 
 function App() {
-  // Get listId from URL or generate new one
-  const [listId, setListId] = useState(() => {
-    const path = window.location.pathname;
-    const match = path.match(/^\/list\/([a-f0-9-]+)$/);
-    if (match) {
-      return match[1];
+  // Generate or retrieve user ID for sync
+  const [userId] = useState(() => {
+    let id = localStorage.getItem('userId');
+    if (!id) {
+      id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('userId', id);
     }
-    // Generate new UUID and redirect
-    const newId = crypto.randomUUID();
-    window.history.replaceState(null, '', `/list/${newId}`);
-    return newId;
+    return id;
   });
 
-  const { list: sharedList, loading, error, updateList } = useSharedList(listId);
-  const [currentList, setCurrentList] = useState<ShoppingList>({
-    id: listId,
+  const [lists, setLists] = useLocalStorage<ShoppingList[]>('shopping-lists', []);
+  const [currentList, setCurrentList] = useLocalStorage<ShoppingList>('current-list', {
+    id: crypto.randomUUID(),
     name: '',
     items: [],
     createdAt: new Date().toISOString(),
     total: 0
   });
+  
+  // Advanced sync functionality
+  const {
+    syncStatus,
+    syncList,
+    syncItem,
+    deleteItem: syncDeleteItem,
+    deleteList: syncDeleteList,
+    forceSync,
+    getStorageMetrics,
+    simulateOffline,
+    simulateOnline
+  } = useAdvancedSync(userId);
 
   const calculateTotal = useCallback((items: GroceryItem[]): number => {
     return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   }, []);
 
-  // Update local state when shared list changes
+  // Real-time sync listener for updates from other devices
   useEffect(() => {
-    if (sharedList) {
-      setCurrentList(prev => ({
-        ...prev,
-        id: sharedList.id,
-        items: sharedList.items,
-        total: calculateTotal(sharedList.items)
-      }));
-    }
-  }, [sharedList, calculateTotal]);
+    const handleRemoteUpdate = (event: any) => {
+      if (event.userId === userId) return; // Ignore own updates
+      
+      console.log('📡 Received remote update:', event);
+      
+      switch (event.type) {
+        case 'item_added':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const itemExists = prev.items.some(item => item.id === event.data.item.id);
+              if (itemExists) return prev;
+              
+              const updatedItems = [...prev.items, event.data.item];
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'item_updated':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const updatedItems = prev.items.map(item =>
+                item.id === event.data.item.id ? event.data.item : item
+              );
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'item_deleted':
+          if (event.data.listId === currentList.id) {
+            setCurrentList(prev => {
+              const updatedItems = prev.items.filter(item => item.id !== event.data.itemId);
+              return {
+                ...prev,
+                items: updatedItems,
+                total: calculateTotal(updatedItems)
+              };
+            });
+          }
+          break;
+          
+        case 'list_updated':
+          if (event.data.id === currentList.id) {
+            setCurrentList(event.data);
+          }
+          break;
+      }
+    };
+
+    // Subscribe to real-time updates
+    const unsubscribe = window.addEventListener('realtime-update', handleRemoteUpdate);
+    
+    return () => {
+      window.removeEventListener('realtime-update', handleRemoteUpdate);
+    };
+  }, [userId, currentList.id, calculateTotal]);
 
   const [currentPage, setCurrentPage] = useState<'list' | 'history'>('list');
   const [newItemName, setNewItemName] = useState('');
@@ -55,20 +122,6 @@ function App() {
     itemId: null,
     itemName: ''
   });
-
-  // Handle URL changes
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      const match = path.match(/^\/list\/([a-f0-9-]+)$/);
-      if (match && match[1] !== listId) {
-        setListId(match[1]);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [listId]);
 
   // Sort items by creation date, newest first
   const sortedItems = [...currentList.items].sort((a, b) => 
@@ -102,6 +155,15 @@ function App() {
   // When searching, don't show checked items at all
   const filteredCheckedItems = hasSearchTerm ? [] : checkedItems;
 
+  useEffect(() => {
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    
+    setLists(prevLists => 
+      prevLists.filter(list => new Date(list.createdAt) > fifteenDaysAgo)
+    );
+  }, [setLists]);
+
   const addItem = async (itemData?: { name: string; price: number }) => {
     const itemName = itemData?.name || newItemName.trim();
     const itemPrice = itemData?.price || 0;
@@ -128,8 +190,26 @@ function App() {
       checked: false
     };
 
-    const updatedItems = [...currentList.items, newItem];
-    await updateList(updatedItems);
+    const updatedList = {
+      ...currentList,
+      items: [...currentList.items, newItem],
+    };
+    updatedList.total = calculateTotal(updatedList.items);
+    
+    setCurrentList(updatedList);
+    
+    // Real-time sync for new items
+    await syncItem(newItem, currentList.id);
+    
+    // Broadcast to other devices
+    window.dispatchEvent(new CustomEvent('realtime-update', {
+      detail: {
+        type: 'item_added',
+        data: { item: newItem, listId: currentList.id },
+        userId: userId,
+        timestamp: Date.now()
+      }
+    }));
     
     setNewItemName('');
   };
@@ -139,7 +219,17 @@ function App() {
       item.id === id ? { ...item, checked: !item.checked } : item
     );
     
-    await updateList(updatedItems);
+    const updatedList = {
+      ...currentList,
+      items: updatedItems
+    };
+    
+    setCurrentList(updatedList);
+    
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
     
     // Clear search when item is checked/unchecked
     setNewItemName('');
@@ -150,8 +240,19 @@ function App() {
     const updatedItems = currentList.items.map(item =>
       item.id === id ? { ...item, price: numPrice, priceDisplay: undefined } : item
     );
-
-    await updateList(updatedItems);
+    
+    const updatedList = {
+      ...currentList,
+      items: updatedItems,
+      total: calculateTotal(updatedItems)
+    };
+    
+    setCurrentList(updatedList);
+    
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
   };
 
   const handlePriceKeyPress = async (e: React.KeyboardEvent, id: string, price: string) => {
@@ -163,7 +264,18 @@ function App() {
         item.id === id ? { ...item, price: numPrice, checked: true } : item
       );
       
-      await updateList(updatedItems);
+      const updatedList = {
+        ...currentList,
+        items: updatedItems,
+        total: calculateTotal(updatedItems)
+      };
+      
+      setCurrentList(updatedList);
+      
+      const updatedItem = updatedItems.find(item => item.id === id);
+      if (updatedItem) {
+        await syncItem(updatedItem, currentList.id);
+      }
       
       // Blur the input to remove focus
       (e.target as HTMLInputElement).blur();
@@ -197,19 +309,20 @@ function App() {
     const updatedItems = currentList.items.map(item =>
       item.id === id ? { ...item, price: numericValue, priceDisplay: rawValue } : item
     );
-
-    // Update local state immediately for responsive UI
-    setCurrentList(prev => ({
-      ...prev,
+    
+    const updatedList = {
+      ...currentList,
       items: updatedItems,
       total: calculateTotal(updatedItems)
-    }));
-
-    // Debounce the database update to avoid too many requests
-    clearTimeout(window.priceUpdateTimeout);
-    window.priceUpdateTimeout = setTimeout(() => {
-      updateList(updatedItems);
-    }, 500);
+    };
+    
+    setCurrentList(updatedList);
+    
+    // Real-time sync for price changes
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
   };
 
   const updateQuantity = async (id: string, increment: boolean) => {
@@ -224,7 +337,18 @@ function App() {
       return item;
     });
     
-    await updateList(updatedItems);
+    const updatedList = {
+      ...currentList,
+      items: updatedItems,
+      total: calculateTotal(updatedItems)
+    };
+    
+    setCurrentList(updatedList);
+    
+    const updatedItem = updatedItems.find(item => item.id === id);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
   };
 
   const startEditing = (item: GroceryItem) => {
@@ -239,8 +363,18 @@ function App() {
     const updatedItems = currentList.items.map(item =>
       item.id === editingId ? { ...item, name: editingName.trim() } : item
     );
-
-    await updateList(updatedItems);
+    
+    const updatedList = {
+      ...currentList,
+      items: updatedItems
+    };
+    
+    setCurrentList(updatedList);
+    
+    const updatedItem = updatedItems.find(item => item.id === editingId);
+    if (updatedItem) {
+      await syncItem(updatedItem, currentList.id);
+    }
     
     setEditingId(null);
     setEditingName('');
@@ -256,7 +390,14 @@ function App() {
 
   const deleteItem = async (id: string) => {
     const updatedItems = currentList.items.filter(item => item.id !== id);
-    await updateList(updatedItems);
+    const updatedList = {
+      ...currentList,
+      items: updatedItems,
+      total: calculateTotal(updatedItems)
+    };
+    
+    setCurrentList(updatedList);
+    await syncDeleteItem(id, currentList.id);
   };
 
   const handleDelete = async () => {
@@ -265,11 +406,45 @@ function App() {
     setDeleteModal({ isOpen: false, itemId: null, itemName: '' });
   };
 
-  const createNewList = () => {
-    const newId = crypto.randomUUID();
-    window.history.pushState(null, '', `/list/${newId}`);
-    setListId(newId);
+  const saveList = async () => {
+    if (currentList.items.length === 0) return;
+    
+    const currentMonth = new Date().toLocaleString('pt-BR', { month: 'long' });
+    const listNumber = lists.length + 1;
+    const listName = `Lista ${listNumber} ${currentMonth}`;
+
+    const newList = {
+      ...currentList,
+      name: listName
+    };
+    
+    setLists(prev => [...prev, newList]);
+    await syncList(newList);
+    
+    setCurrentList({
+      id: crypto.randomUUID(),
+      name: '',
+      items: [],
+      createdAt: new Date().toISOString(),
+      total: 0
+    });
+  };
+
+  const loadList = async (list: ShoppingList) => {
+    setCurrentList({
+      ...list,
+      items: list.items.map(item => ({
+        ...item,
+        checked: item.checked || false
+      }))
+    });
+    await syncList(list);
     setCurrentPage('list');
+  };
+
+  const deleteListHandler = async (listId: string) => {
+    setLists(prev => prev.filter(list => list.id !== listId));
+    await syncDeleteList(listId);
   };
 
   const renderItemList = (items: GroceryItem[], title?: string) => (
@@ -372,44 +547,9 @@ function App() {
     </>
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando lista...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Erro ao carregar a lista: {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Tentar novamente
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-100">
       <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="text-blue-600 w-6 h-6 sm:w-7 sm:h-7" />
-            <h1 className="text-lg sm:text-2xl font-bold text-gray-800">Lista de Compras</h1>
-          </div>
-          <ShareButton listId={listId} />
-        </div>
-
         <div className="flex items-center gap-2 mb-4">
           <ShoppingBag className="text-blue-600 w-6 h-6 sm:w-7 sm:h-7" />
           <h1 className="text-lg sm:text-2xl font-bold text-gray-800">Lista de Compras</h1>
@@ -463,32 +603,22 @@ function App() {
                   <div className="text-base sm:text-xl font-semibold">
                     Total: R$ {currentList.total.toFixed(2)}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={createNewList}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                    >
-                      Nova Lista
-                    </button>
-                  </div>
+                  <button
+                    onClick={saveList}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                  >
+                    Salvar Lista
+                  </button>
                 </div>
               </div>
             )}
           </>
         ) : (
-          <div className="pb-24">
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">Histórico</h2>
-            <p className="text-gray-600 mb-4">
-              As listas agora são compartilhadas através de URLs únicos. 
-              Compartilhe o link da sua lista atual para colaborar em tempo real!
-            </p>
-            <button
-              onClick={createNewList}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Criar Nova Lista
-            </button>
-          </div>
+          <HistoryList
+            lists={lists}
+            onSelectList={loadList}
+            onDeleteList={deleteListHandler}
+          />
         )}
       </main>
 
@@ -503,6 +633,7 @@ function App() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteModal({ isOpen: false, itemId: null, itemName: '' })}
       />
+
     </div>
   );
 }

@@ -23,8 +23,15 @@ export interface DeleteModalProps {
   onCancel: () => void;
 }
 
-declare global {
-  interface Window {
-    priceUpdateTimeout: NodeJS.Timeout;
-  }
+export interface ListDetailsModalProps {
+  isOpen: boolean;
+  list: ShoppingList | null;
+  onClose: () => void;
+}
+
+export interface DeleteListModalProps {
+  isOpen: boolean;
+  listName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
