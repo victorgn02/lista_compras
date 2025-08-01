@@ -37,21 +37,21 @@ export function useSharedList(listId: string) {
         });
       } else {
         // Create new list if it doesn't exist
-        const newList = {
-          id: listId,
-          items: [],
-          updated_at: new Date().toISOString()
-        };
-
-        const { error: insertError } = await supabase
+        const { data: newData, error: upsertError } = await supabase
           .from('lists')
-          .insert([{ id: listId, items: [] }]);
+          .upsert([{ id: listId, items: [] }], { onConflict: 'id' })
+          .select()
+          .single();
 
-        if (insertError) {
-          throw insertError;
+        if (upsertError) {
+          throw upsertError;
         }
 
-        setList(newList);
+        setList({
+          id: newData.id,
+          items: newData.items || [],
+          updated_at: newData.updated_at
+        });
       }
     } catch (err) {
       console.error('Error loading list:', err);
