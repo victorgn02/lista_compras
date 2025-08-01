@@ -23,7 +23,7 @@ export function useSharedList(listId: string) {
         .from('lists')
         .select('*')
         .eq('id', listId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = not found
         throw error;
