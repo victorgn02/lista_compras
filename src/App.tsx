@@ -557,7 +557,8 @@ function App() {
 
         {currentPage === 'list' ? (
           <>
-            <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6">
+            <div className="fixed top-0 left-0 right-0 bg-white border-b shadow-sm z-40 p-3 sm:p-4">
+              <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row gap-2">
               <div className="relative w-full">
                 <input
                   type="text"
@@ -596,6 +597,7 @@ function App() {
               {renderItemList(filteredUncheckedItems)}
               {renderItemList(filteredCheckedItems, 'Já adicionados')}
             </div>
+            </div>
 
             {currentList.items.length > 0 && (
               <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg">
@@ -611,6 +613,10 @@ function App() {
                   </button>
                 </div>
               </div>
+              </div>
+            </div>
+
+            <div className="pt-20 sm:pt-24">
             )}
           </>
         ) : (
