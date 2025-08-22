@@ -557,7 +557,37 @@ function App() {
 
         {currentPage === 'list' ? (
           <>
-            <div className="bg-white rounded-lg shadow-md mb-32 divide-y divide-gray-100">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 sm:mb-6">
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                  placeholder="Adicionar ou buscar produtos"
+                  className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                />
+                {newItemName && (
+                  <button
+                    onClick={() => setNewItemName('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => addItem()}
+                  className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                >
+                  <Plus size={18} />
+                  <span>Adicionar</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md mb-24 divide-y divide-gray-100">
               {filteredUncheckedItems.length === 0 && hasSearchTerm && (
                 <div className="p-4 text-center text-gray-500">
                   Nenhum produto encontrado. Pressione Enter para adicionar "{newItemName}".
@@ -568,38 +598,7 @@ function App() {
             </div>
 
             {currentList.items.length > 0 && (
-              <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg z-40">
-                <div className="w-full max-w-4xl mx-auto px-4 py-3 sm:px-6">
-                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                    <div className="relative w-full">
-                      <input
-                        type="text"
-                        value={newItemName}
-                        onChange={(e) => setNewItemName(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
-                        placeholder="Adicionar ou buscar produtos"
-                        className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                      />
-                      {newItemName && (
-                        <button
-                          onClick={() => setNewItemName('')}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          <X size={18} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => addItem()}
-                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-                      >
-                        <Plus size={18} />
-                        <span>Adicionar</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg">
                 <div className="w-full max-w-4xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
                   <div className="text-base sm:text-xl font-semibold">
                     Total: R$ {currentList.total.toFixed(2)}
