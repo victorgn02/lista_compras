@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Plus, Minus, Trash2, Edit2, Check, X, Search } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, CreditCard as Edit2, Check, X, Search } from 'lucide-react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAdvancedSync } from './hooks/useAdvancedSync';
 import { DeleteModal } from './components/DeleteModal';
@@ -447,6 +447,107 @@ function App() {
     await syncDeleteList(listId);
   };
 
+  const renderItem = (item: GroceryItem) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={item.checked}
+          onChange={() => toggleItemCheck(item.id)}
+          className="w-5 h-5 text-[#1D84FF] rounded border-slate-300 focus:ring-[#1D84FF] focus:ring-2"
+        />
+        {editingId === item.id ? (
+          <div className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent"
+              autoFocus
+            />
+            <button
+              onClick={saveEdit}
+              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+            >
+              <Check size={18} />
+            </button>
+            <button
+              onClick={() => setEditingId(null)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-between">
+            <span className={`font-medium ${item.checked ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+              {item.name}
+            </span>
+            {!item.checked && (
+              <button
+                onClick={() => startEditing(item)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-center gap-3">
+        {/* Quantity Controls */}
+        <div className="flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+          {!item.checked && (
+            <button
+              onClick={() => item.quantity === 1 ? confirmDelete(item) : updateQuantity(item.id, false)}
+              className={`p-3 transition-colors ${
+                item.quantity === 1 
+                  ? 'text-red-500 hover:text-red-600 hover:bg-red-50' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {item.quantity === 1 ? <Trash2 size={18} /> : <Minus size={18} />}
+            </button>
+          )}
+          <span className="px-4 py-3 bg-white text-center font-semibold text-slate-900 min-w-[60px] border-l border-r border-slate-200">
+            {item.quantity}
+          </span>
+          {!item.checked && (
+            <button
+              onClick={() => updateQuantity(item.id, true)}
+              className="p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <Plus size={18} />
+            </button>
+          )}
+        </div>
+        
+        <span className="text-slate-400 font-medium">×</span>
+        
+        {/* Price Input */}
+        <input
+          type="text"
+          value={item.priceDisplay || (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
+          onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
+          onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
+          placeholder="R$ 0,00"
+          disabled={item.checked}
+          className={`flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent font-medium ${
+            item.checked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900'
+          }`}
+        />
+      </div>
+      
+      {!item.checked && item.price > 0 && (
+        <div className="text-right">
+          <span className="text-sm text-slate-500">Subtotal: </span>
+          <span className="font-semibold text-slate-900">R$ {(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      )}
+    </div>
+  );
+
   const renderItemList = (items: GroceryItem[], title?: string) => (
     <>
       {title && items.length > 0 && (
@@ -542,74 +643,9 @@ function App() {
               )}
             </div>
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-between">
-            <span className={`font-medium ${item.checked ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
-              {item.name}
-            </span>
-            {!item.checked && (
-              <button
-                onClick={() => startEditing(item)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-              >
-                <Edit2 size={16} />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-      
-      <div className="flex items-center gap-3">
-        {/* Quantity Controls */}
-        <div className="flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-          {!item.checked && (
-            <button
-              onClick={() => item.quantity === 1 ? confirmDelete(item) : updateQuantity(item.id, false)}
-              className={`p-3 transition-colors ${
-                item.quantity === 1 
-                  ? 'text-red-500 hover:text-red-600 hover:bg-red-50' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {item.quantity === 1 ? <Trash2 size={18} /> : <Minus size={18} />}
-            </button>
-          )}
-          <span className="px-4 py-3 bg-white text-center font-semibold text-slate-900 min-w-[60px] border-l border-r border-slate-200">
-            {item.quantity}
-          </span>
-          {!item.checked && (
-            <button
-              onClick={() => updateQuantity(item.id, true)}
-              className="p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <Plus size={18} />
-            </button>
-          )}
         </div>
-        
-        <span className="text-slate-400 font-medium">×</span>
-        
-        {/* Price Input */}
-        <input
-          type="text"
-          value={item.priceDisplay || (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
-          onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
-          onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
-          placeholder="R$ 0,00"
-          disabled={item.checked}
-          className={`flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent font-medium ${
-            item.checked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900'
-          }`}
-        />
-      </div>
-      
-      {!item.checked && item.price > 0 && (
-        <div className="text-right">
-          <span className="text-sm text-slate-500">Subtotal: </span>
-          <span className="font-semibold text-slate-900">R$ {(item.price * item.quantity).toFixed(2)}</span>
-        </div>
-      )}
-    </div>
+      ))}
+    </>
   );
 
   return (
@@ -677,22 +713,6 @@ function App() {
                   ))}
                 </div>
               )}
-              {renderItemList(filteredUncheckedItems)}
-              {renderItemList(filteredCheckedItems, 'Já adicionados')}
-            </div>
-
-            {currentList.items.length > 0 && (
-              <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg">
-                <div className="w-full max-w-4xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
-                  <div className="text-base sm:text-xl font-semibold">
-                    Total: R$ {currentList.total.toFixed(2)}
-                  </div>
-                  <button
-                    onClick={saveList}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                  >
-                    Salvar Lista
-                  </button>
 
               {/* Checked Items */}
               {filteredCheckedItems.length > 0 && (
@@ -753,33 +773,5 @@ function App() {
     </div>
   );
 }
-  const renderItem = (item: GroceryItem) => (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          checked={item.checked}
-          onChange={() => toggleItemCheck(item.id)}
-          className="w-5 h-5 text-[#1D84FF] rounded border-slate-300 focus:ring-[#1D84FF] focus:ring-2"
-        />
-        {editingId === item.id ? (
-          <div className="flex-1 flex items-center gap-2">
-            <input
-              type="text"
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent"
-              autoFocus
-            />
-            <button
-              onClick={saveEdit}
-              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-            >
-              <Check size={18} />
-            </button>
-            <button
-              onClick={() => setEditingId(null)}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-            >
-              <X size={18} />
-            </button>
+
+export default App;
