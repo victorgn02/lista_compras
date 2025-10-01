@@ -7,25 +7,30 @@ export function DeleteModal({ isOpen, itemName, onConfirm, onCancel }: DeleteMod
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-sm mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold">Excluir Item</h2>
-          <button onClick={onCancel} className="text-gray-500 hover:text-gray-700">
-            <X size={20} />
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-slate-900">Excluir Item</h2>
+          <button 
+            onClick={onCancel} 
+            className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded-lg transition-colors"
+          >
+            <X size={22} />
           </button>
         </div>
-        <p className="mb-2 text-sm sm:text-base">Deseja excluir o item "{itemName}"?</p>
-        <p className="text-gray-500 text-xs sm:text-sm mb-6">Esta ação não pode ser desfeita</p>
-        <div className="flex justify-end gap-3">
+        <div className="mb-6">
+          <p className="text-slate-900 mb-2">Deseja excluir o item "{itemName}"?</p>
+          <p className="text-slate-500 text-sm">Esta ação não pode ser desfeita</p>
+        </div>
+        <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-200 text-gray-800 rounded text-sm sm:text-base hover:bg-gray-300 transition-colors"
+            className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-500 text-white rounded text-sm sm:text-base hover:bg-red-600 transition-colors"
+            className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium"
           >
             Excluir
           </button>

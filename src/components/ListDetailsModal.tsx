@@ -7,40 +7,43 @@ export function ListDetailsModal({ isOpen, list, onClose }: ListDetailsModalProp
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold">{list.name}</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-xl font-bold text-slate-900">{list.name}</h2>
+            <p className="text-sm text-slate-500 mt-1">
               {new Date(list.createdAt).toLocaleDateString('pt-BR')}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X size={20} />
+          <button 
+            onClick={onClose} 
+            className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-50 rounded-lg transition-colors"
+          >
+            <X size={22} />
           </button>
         </div>
 
         <div className="space-y-4">
           {list.items.map((item) => (
-            <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl">
               <div className="flex-1">
-                <span className="text-sm sm:text-base text-gray-800">{item.name}</span>
-                <div className="text-sm text-gray-500">
+                <span className="font-medium text-slate-900">{item.name}</span>
+                <div className="text-sm text-slate-500 mt-1">
                   Quantidade: {item.quantity} x R$ {item.price.toFixed(2)}
                 </div>
               </div>
-              <span className="text-sm sm:text-base font-medium">
+              <span className="font-bold text-slate-900">
                 R$ {(item.price * item.quantity).toFixed(2)}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 pt-6 border-t flex justify-between items-center">
-          <div className="text-sm sm:text-base text-gray-600">
+        <div className="mt-6 pt-6 border-t border-slate-200 flex justify-between items-center">
+          <div className="text-slate-600">
             {list.items.length} itens
           </div>
-          <div className="text-lg sm:text-xl font-semibold">
+          <div className="text-xl font-bold text-slate-900">
             Total: R$ {list.total.toFixed(2)}
           </div>
         </div>

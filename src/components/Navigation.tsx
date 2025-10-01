@@ -8,25 +8,29 @@ interface NavigationProps {
 
 export function Navigation({ currentPage, onNavigate }: NavigationProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
-      <div className="max-w-4xl mx-auto flex justify-around">
+    <nav className="bg-white">
+      <div className="max-w-4xl mx-auto flex justify-around py-2">
         <button
           onClick={() => onNavigate('list')}
-          className={`flex flex-col items-center py-3 px-5 ${
-            currentPage === 'list' ? 'text-blue-600' : 'text-gray-600'
+          className={`flex flex-col items-center py-3 px-6 rounded-xl transition-colors ${
+            currentPage === 'list' 
+              ? 'text-[#1D84FF] bg-blue-50' 
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
           }`}
         >
-          <ShoppingBag size={24} />
-          <span className="text-xs mt-1">Lista</span>
+          <ShoppingBag size={22} />
+          <span className="text-xs mt-1 font-medium">Lista</span>
         </button>
         <button
           onClick={() => onNavigate('history')}
-          className={`flex flex-col items-center py-3 px-5 ${
-            currentPage === 'history' ? 'text-blue-600' : 'text-gray-600'
+          className={`flex flex-col items-center py-3 px-6 rounded-xl transition-colors ${
+            currentPage === 'history' 
+              ? 'text-[#1D84FF] bg-blue-50' 
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
           }`}
         >
-          <History size={24} />
-          <span className="text-xs mt-1">Histórico</span>
+          <History size={22} />
+          <span className="text-xs mt-1 font-medium">Histórico</span>
         </button>
       </div>
     </nav>

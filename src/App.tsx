@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Plus, Minus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, Edit2, Check, X, Search } from 'lucide-react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useAdvancedSync } from './hooks/useAdvancedSync';
 import { DeleteModal } from './components/DeleteModal';
@@ -542,56 +542,139 @@ function App() {
               )}
             </div>
           </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-between">
+            <span className={`font-medium ${item.checked ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+              {item.name}
+            </span>
+            {!item.checked && (
+              <button
+                onClick={() => startEditing(item)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="flex items-center gap-3">
+        {/* Quantity Controls */}
+        <div className="flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+          {!item.checked && (
+            <button
+              onClick={() => item.quantity === 1 ? confirmDelete(item) : updateQuantity(item.id, false)}
+              className={`p-3 transition-colors ${
+                item.quantity === 1 
+                  ? 'text-red-500 hover:text-red-600 hover:bg-red-50' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {item.quantity === 1 ? <Trash2 size={18} /> : <Minus size={18} />}
+            </button>
+          )}
+          <span className="px-4 py-3 bg-white text-center font-semibold text-slate-900 min-w-[60px] border-l border-r border-slate-200">
+            {item.quantity}
+          </span>
+          {!item.checked && (
+            <button
+              onClick={() => updateQuantity(item.id, true)}
+              className="p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <Plus size={18} />
+            </button>
+          )}
         </div>
-      ))}
-    </>
+        
+        <span className="text-slate-400 font-medium">×</span>
+        
+        {/* Price Input */}
+        <input
+          type="text"
+          value={item.priceDisplay || (item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '')}
+          onChange={(e) => handlePriceInputChange(item.id, e.target.value)}
+          onKeyPress={(e) => handlePriceKeyPress(e, item.id, e.currentTarget.value)}
+          placeholder="R$ 0,00"
+          disabled={item.checked}
+          className={`flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent font-medium ${
+            item.checked ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900'
+          }`}
+        />
+      </div>
+      
+      {!item.checked && item.price > 0 && (
+        <div className="text-right">
+          <span className="text-sm text-slate-500">Subtotal: </span>
+          <span className="font-semibold text-slate-900">R$ {(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      )}
+    </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <main className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ShoppingBag className="text-blue-600 w-6 h-6 sm:w-7 sm:h-7" />
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-800">Lista de Compras</h1>
-        </div>
-
-        {currentPage === 'list' ? (
-          <>
-            <div className="fixed top-0 left-0 right-0 bg-white border-b shadow-sm z-40 p-3 sm:p-4">
-              <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row gap-2">
-              <div className="relative w-full">
+      {/* Fixed Header */}
+      <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-50">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3 mb-3">
+            <ShoppingBag className="text-[#1D84FF] w-6 h-6" />
+            <h1 className="text-xl font-bold text-slate-900">Lista de Compras</h1>
+          </div>
+          
+          {currentPage === 'list' && (
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addItem()}
                   placeholder="Adicionar ou buscar produtos"
-                  className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                  className="w-full pl-10 pr-10 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent text-base bg-slate-50"
                 />
                 {newItemName && (
                   <button
                     onClick={() => setNewItemName('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
                   >
-                    <X size={18} />
+                    <X size={16} />
                   </button>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => addItem()}
-                  className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <Plus size={18} />
-                  <span>Adicionar</span>
-                </button>
-              </div>
+              <button
+                onClick={() => addItem()}
+                className="px-6 py-3 bg-[#1D84FF] text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 font-medium shadow-sm"
+              >
+                <Plus size={18} />
+                <span className="hidden sm:inline">Adicionar</span>
+              </button>
             </div>
+          )}
+        </div>
+      </header>
 
-            <div className="bg-white rounded-lg shadow-md mb-24 divide-y divide-gray-100">
+      {/* Scrollable Content Area */}
+      <main className="pt-32 pb-32">
+        <div className="max-w-4xl mx-auto px-4">
+          {currentPage === 'list' ? (
+            <div className="space-y-4">
               {filteredUncheckedItems.length === 0 && hasSearchTerm && (
-                <div className="p-4 text-center text-gray-500">
-                  Nenhum produto encontrado. Pressione Enter para adicionar "{newItemName}".
+                <div className="bg-white rounded-2xl p-6 text-center border border-slate-200">
+                  <p className="text-slate-500 mb-3">Nenhum produto encontrado</p>
+                  <p className="text-sm text-slate-400">Pressione Enter para adicionar "{newItemName}"</p>
+                </div>
+              )}
+
+              {/* Unchecked Items */}
+              {filteredUncheckedItems.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                  {filteredUncheckedItems.map((item, index) => (
+                    <div key={item.id} className={`p-4 ${index !== filteredUncheckedItems.length - 1 ? 'border-b border-slate-100' : ''}`} data-item-id={item.id}>
+                      {renderItem(item)}
+                    </div>
+                  ))}
                 </div>
               )}
               {renderItemList(filteredUncheckedItems)}
@@ -610,23 +693,56 @@ function App() {
                   >
                     Salvar Lista
                   </button>
+
+              {/* Checked Items */}
+              {filteredCheckedItems.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    <h3 className="font-semibold text-slate-700 text-sm">Já adicionados</h3>
+                  </div>
+                  {filteredCheckedItems.map((item, index) => (
+                    <div key={item.id} className={`p-4 ${index !== filteredCheckedItems.length - 1 ? 'border-b border-slate-100' : ''}`} data-item-id={item.id}>
+                      {renderItem(item)}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <HistoryList
-            lists={lists}
-            onSelectList={loadList}
-            onDeleteList={deleteListHandler}
-          />
-        )}
+              )}
+            </div>
+          ) : (
+            <HistoryList
+              lists={lists}
+              onSelectList={loadList}
+              onDeleteList={deleteListHandler}
+            />
+          )}
+        </div>
       </main>
 
-      <Navigation
-        currentPage={currentPage}
-        onNavigate={setCurrentPage}
-      />
+      {/* Fixed Bottom Section */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg">
+        {/* Total and Save Button */}
+        {currentPage === 'list' && currentList.items.length > 0 && (
+          <div className="border-b border-slate-100 px-4 py-3">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div className="text-xl font-bold text-slate-900">
+                Total: R$ {currentList.total.toFixed(2)}
+              </div>
+              <button
+                onClick={saveList}
+                className="px-6 py-3 bg-[#1D84FF] text-white rounded-xl hover:bg-blue-600 transition-colors font-medium shadow-sm"
+              >
+                Salvar Lista
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Navigation */}
+        <Navigation
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+        />
+      </div>
 
       <DeleteModal
         isOpen={deleteModal.isOpen}
@@ -634,9 +750,36 @@ function App() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteModal({ isOpen: false, itemId: null, itemName: '' })}
       />
-
     </div>
   );
 }
-
-export default App;
+  const renderItem = (item: GroceryItem) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={item.checked}
+          onChange={() => toggleItemCheck(item.id)}
+          className="w-5 h-5 text-[#1D84FF] rounded border-slate-300 focus:ring-[#1D84FF] focus:ring-2"
+        />
+        {editingId === item.id ? (
+          <div className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1D84FF] focus:border-transparent"
+              autoFocus
+            />
+            <button
+              onClick={saveEdit}
+              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+            >
+              <Check size={18} />
+            </button>
+            <button
+              onClick={() => setEditingId(null)}
+              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              <X size={18} />
+            </button>
