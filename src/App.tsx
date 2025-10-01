@@ -597,7 +597,6 @@ function App() {
               {renderItemList(filteredUncheckedItems)}
               {renderItemList(filteredCheckedItems, 'Já adicionados')}
             </div>
-            </div>
 
             {currentList.items.length > 0 && (
               <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg">
@@ -613,10 +612,6 @@ function App() {
                   </button>
                 </div>
               </div>
-              </div>
-            </div>
-
-            <div className="pt-20 sm:pt-24">
             )}
           </>
         ) : (
