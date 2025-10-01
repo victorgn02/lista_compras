@@ -494,7 +494,6 @@ function App() {
           </div>
         )}
       </div>
-      
       <div className="flex items-center gap-3">
         {/* Quantity Controls */}
         <div className="flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
@@ -546,6 +545,7 @@ function App() {
         </div>
       )}
     </div>
+  </div>
   );
 
   const renderItemList = (items: GroceryItem[], title?: string) => (
